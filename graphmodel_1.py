@@ -21,7 +21,7 @@ class Model(paddle.nn.Layer):
         elif self.model_name == 'GAT':
             self.graphmodel = pnn.GATConv(100, int(self.hidden_size/8), feat_drop=self.dropout, num_heads = 8)
             self.graphmodel_h = pnn.GATConv(self.hidden_size, int(self.hidden_size/8), feat_drop=self.dropout, num_heads = 8)
-            
+            self.graphmodel_3 = pnn.GATConv(self.hidden_size, int(self.hidden_size/8), feat_drop=self.dropout, num_heads = 8)
         elif self.model_name == 'GraphSAGE':
             self.graphmodel = pnn.GraphSageConv(100, self.hidden_size, aggr_func="max")
             self.graphmodel_h = pnn.GraphSageConv(self.hidden_size, self.hidden_size, aggr_func="max")
@@ -36,9 +36,14 @@ class Model(paddle.nn.Layer):
                         weight_attr = paddle.ParamAttr(name = 'res_w_2'),
                         bias_attr = paddle.ParamAttr(name = 'res_b_2'))
 
+        self.resfc_3 = nn.Linear(self.hidden_size,
+                        self.hidden_size, 
+                        weight_attr = paddle.ParamAttr(name = 'res_w_3'),
+                        bias_attr = paddle.ParamAttr(name = 'res_b_3'))
         self.fc = nn.Linear(self.hidden_size, 35, weight_attr = paddle.ParamAttr(name = 'output_w_0'))
 
-    def forward(self, graph, x_input, y):
+    def forward(self, graph, x_input):
+
         #shape of x is [Num, Channels]
         x = x_input
         #shape of label is [Num, ]
@@ -50,21 +55,23 @@ class Model(paddle.nn.Layer):
                 x_res = self.resfc_1(x_res)
                 x = x + x_res
                 x = nn.functional.relu(x)
-            else:
+            elif i == 1:
                 x_res = x
                 x = self.graphmodel_h(graph, x)
                 x_res = self.resfc_2(x_res)
                 x = x + x_res
                 x = nn.functional.relu(x)
+            else:
+                x_res = x
+                x = self.graphmodel_3(graph, x)
+                x_res = self.resfc_3(x_res)
+                x = x + x_res
+                x = nn.functional.relu(x)
+
         #now x is [num, hidden_size]
 
         x = self.fc(x)
-        loss, pred = nn.functional.softmax_with_cross_entropy(
-        logits=x, label=y, return_softmax=True)
-        acc = paddle.metric.accuracy(input=pred, label=y, k=1)
-        pred = paddle.argmax(pred, -1)
-       
-        loss = paddle.mean(loss)
-        return loss, pred, acc
+        #[num, 35]
+        return x
 
 
