@@ -8,11 +8,9 @@ in order to start training, simply type
 python train.py
 ```
 then two .csv files will be generated. The two files
+`submission.csv` is the unsmoothed output and `submission_cs.csv` is the smoothed output of the model.
 
-```
-submission.csv submission_cs.csv
-```
-is the unsmoothed output and smoothed output of the model.
+
 
 ## Papers Related
 Combining Label Propagation and Simple Models Out-performs Graph Neural Networks
