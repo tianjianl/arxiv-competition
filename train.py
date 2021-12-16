@@ -73,7 +73,7 @@ import pandas as pd
 from easydict import EasyDict as edict
 
 config = {
-    "model_name": "GCN",
+    "model_name": "GraphSAGE",
     "num_class": 35,
     "num_layers": 2,
     "dropout": 0.5,
@@ -192,7 +192,7 @@ optim = paddle.optimizer.Adam(learning_rate = lr, parameters = model.parameters(
 # In[8]:
 
 
-epoch = 400
+epoch = 200
 # 将图数据变成 feed_dict 用于传入Paddle Excecutor
 criterion = paddle.nn.loss.CrossEntropyLoss()
 
@@ -255,100 +255,59 @@ submission = pd.DataFrame(data={
                             "label": test_pred.reshape(-1)
                         })
 submission.to_csv("submission.csv", index=False)
+
+#saving the state dict for smoothing final results 
 paddle.save(model.state_dict(), "model_state_dict")
 
 
-model_state_dict = paddle.load('model_state_dict')
-#model.load_dict(model_state_dict)
-
-y_pred = model(graph, graph.node_feat['feat']) 
-y_soft = nn.functional.softmax(y_pred)
 
 
 # ## Correct and Smooth部分
 # 如果我们使用MLP，就需要调用Correct部分，但我们使用了GAT就需要调用Smooth部分。
 
-# from correctandsmooth import LayerPropagation, CorrectAndSmooth
-# 
-# cas = CorrectAndSmooth(50, 0.979, 'DAD', 50, 0.756, 'DAD', 20.)
-# 
-# mask_idx = paddle.concat([train_index, val_index])
-# y_soft = cas.smooth(graph, y_soft, labels[mask_idx], mask_idx)
-# pred = paddle.argmax(y_soft, dim=-1, keepdim=True)
+# In[10]:
+
+
+from correctandsmooth import LayerPropagation, CorrectAndSmooth
+
+model_state_dict = paddle.load('model_state_dict')
+model.load_dict(model_state_dict)
+y_pred = model(graph, graph.node_feat['feat']) 
+
+y_soft = nn.functional.softmax(y_pred)
+
+cas = CorrectAndSmooth(50, 0.979, 'DAD', 50, 0.756, 'DAD', 20.)
+
+mask_idx = paddle.concat([train_index, val_index])
+node_label = paddle.to_tensor(np.reshape(dataset.node_label, [-1 , 1]))
+
+mask_label = paddle.gather(node_label, mask_idx)
+mask_label = paddle.nn.functional.one_hot(mask_label, num_classes=35)
+y_soft = cas.smooth(graph, y_soft, mask_label, mask_idx)
+
+
 
 # ## 生成提交文件
 # 
 # 最后一步，我们可以使用pandas轻松生成提交文件，最后下载 submission.csv 提交就好了。
 
-# In[10]:
+# In[11]:
 
 
-y_pred = paddle.gather(y_pred, test_index)
+pred = paddle.argmax(y_soft, axis=-1, keepdim=True)
+test_index = paddle.to_tensor(test_index)
+pred = paddle.gather(pred, test_index)
 test_index = np.array(test_index)
-y_hat = np.array(y_pred)
+pred = np.array(pred)
 
+test_index = np.array(test_index)
+pred = np.array(pred)
+submission = pd.DataFrame(data={
+                            "nid": test_index.reshape(-1),
+                            "label": pred.reshape(-1)
+                        })
+submission.to_csv("submission_cs.csv", index=False)
 
-# ## 进阶资料
-# 
-# 
-# ### 1. 自己动手实现图神经网络
-# 
-# 这里以想自己实现一个CustomGCN为例子
-# 
-# 首先，我们在model.py 创建一个类CustomGCN
-# 
-# ```
-# import paddle.fluid.layers as L
-# 
-# class CustomGCN(object):
-#     """实现自己的CustomGCN"""
-#     def __init__(self, config, num_class):
-#         # 分类的数目
-#         self.num_class = num_class
-#         # 分类的层数，默认为1
-#         self.num_layers = config.get("num_layers", 1)
-#         # 中间层 hidden size 默认64
-#         self.hidden_size = config.get("hidden_size", 64)
-#         # 默认dropout率0.5
-#         self.dropout = config.get("dropout", 0.5)
-#         
-#     def forward(self, graph_wrapper, feature, phase):
-#         """定义前向图神经网络
-#         
-#         graph_wrapper: 图的数据的容器
-#         feature: 节点特征
-#         phase: 标记训练或者测试阶段
-#         """
-#         # 通过Send Recv来定义GCN
-#         def send_func(src_feat, dst_feat, edge_feat):
-#             # 发送函数简单将输入src发送到输出节点dst。
-#             return { "output": src_feat["h"] }
-#             
-#         def recv_func(msg):
-#             # 对消息函数进行简单求均值
-#             return L.sequence_pool(msg["output"], "average")
-# 		
-#         # 调用发送
-#         message = graph_wrapper.send(send_func,
-#                                nfeat_list=[ ("h", feature)])
-#                           
-#         # 调用接收
-#         output = graph_wrapper.recv(message, recv_func)
-#         
-#         # 对输出过一层MLP
-#         output = L.fc(output, size=self.num_class, name="final_output")
-# ```
-# 
-# 
-# 然后，我们只要改一下本notebook脚本的config，把model_type改成CustomGCN就能跑起来了。
-# 
-# ```
-# config = {
-#     "model_name": "CustomGCN",
-# }
-# ```
-
-# 
 
 # ### 2. One More Thing
 # 

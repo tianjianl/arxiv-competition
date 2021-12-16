@@ -16,7 +16,7 @@ class LayerPropagation(nn.Layer):
             return {'m':src_feat['h']}
 
         def recv_func(msg):
-            return msg.sum(msg['m'])
+            return msg.reduce_sum(msg['m'])
 
         y = labels
         if mask is not None:
@@ -24,19 +24,24 @@ class LayerPropagation(nn.Layer):
             y[mask] = labels[mask]
 
         last = (1 - self.alpha) * y
-        degree = g.indegree()
-        norm = paddle.cast(degree, dtype=paddle.get_default_dtype)
+        degree = graph.indegree()
+        norm = paddle.cast(degree, dtype=paddle.float32)
+        y = paddle.cast(y, dtype = paddle.float32)
         norm = paddle.clip(norm, min=1.0)
-        norm = paddle.pow(degree, -0.5 if self.adj == 'DAD' else -1)
+        norm = paddle.pow(norm, -0.5 if self.adj == 'DAD' else -1)
         norm = paddle.reshape(norm, [-1, 1])
 
-        for _ in range(self.num_layers):
+        for i in range(self.num_layers):
+            if i % 10 == 0:
+                print("now at layer:",i)
             if self.adj in ['AD', 'DAD']:
                 y = norm * y
+                
+            graph.node_feat['h'] = y
+            msg = graph.send(send_func, src_feat={'h' : y})
+            graph.recv(recv_func, msg)
 
-            msg = graph.send(send_func, src_feat={"h" : y})
-            graph.recv(reduce_func = recv_func, msg = msg)
-            y = self.alpha * graph.node_feat.pop('h')
+            y = self.alpha * graph.node_feat.pop("h")
             if self.adj in ['DAD', 'DA']:
                 y = y * norm
 

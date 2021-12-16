@@ -19,9 +19,9 @@ class Model(paddle.nn.Layer):
             self.graphmodel_h = pnn.GCNConv(self.hidden_size, self.hidden_size)
 
         elif self.model_name == 'GAT':
-            self.graphmodel = pnn.GATConv(100, int(self.hidden_size/8), feat_drop=self.dropout, num_heads = 8)
-            self.graphmodel_h = pnn.GATConv(self.hidden_size, int(self.hidden_size/8), feat_drop=self.dropout, num_heads = 8)
-            self.graphmodel_3 = pnn.GATConv(self.hidden_size, int(self.hidden_size/8), feat_drop=self.dropout, num_heads = 8)
+            self.graphmodel = pnn.GATConv(100, int(self.hidden_size/4), feat_drop=self.dropout, num_heads = 4)
+            self.graphmodel_h = pnn.GATConv(self.hidden_size, int(self.hidden_size/4), feat_drop=self.dropout, num_heads = 4)
+            self.graphmodel_3 = pnn.GATConv(self.hidden_size, int(self.hidden_size/4), feat_drop=self.dropout, num_heads = 4)
         elif self.model_name == 'GraphSAGE':
             self.graphmodel = pnn.GraphSageConv(100, self.hidden_size, aggr_func="max")
             self.graphmodel_h = pnn.GraphSageConv(self.hidden_size, self.hidden_size, aggr_func="max")
