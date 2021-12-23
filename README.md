@@ -1,6 +1,8 @@
 ## About
 This repository contains a PaddlePaddle implementation of a GNN for classification on a smaller ogbn-arxiv dataset, code written by Tianjian Li.  
-If you want to see the results, you can find them in [this notebook](resgcn.ipynb)
+  
+  
+If you want to see the results, you can find them in [this notebook](resgcn.ipynb). 
 
 ## Training
 in order to start training, simply type 
