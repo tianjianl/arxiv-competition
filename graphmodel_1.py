@@ -16,16 +16,16 @@ class Model(paddle.nn.Layer):
         self.model_name = config.get("model_name", 'GCN')
         if self.model_name == 'GCN':
             self.graphmodel = pnn.GCNConv(100, self.hidden_size)
-            self.graphmodel_h = pnn.GCNConv(self.hidden_size, self.hidden_size)
-
+            self.graphmodel_1 = pnn.GCNConv(self.hidden_size, self.hidden_size)
+            self.graphmodel_2 = pnn.GCNConv(self.hidden_size, self.hidden_size)
         elif self.model_name == 'GAT':
-            self.graphmodel = pnn.GATConv(100, int(self.hidden_size/4), feat_drop=self.dropout, num_heads = 4)
-            self.graphmodel_h = pnn.GATConv(self.hidden_size, int(self.hidden_size/4), feat_drop=self.dropout, num_heads = 4)
-            self.graphmodel_3 = pnn.GATConv(self.hidden_size, int(self.hidden_size/4), feat_drop=self.dropout, num_heads = 4)
+            self.graphmodel = pnn.GATConv(100, int(self.hidden_size/3), feat_drop=self.dropout, num_heads = 3)
+            self.graphmodel_1 = pnn.GATConv(self.hidden_size, int(self.hidden_size/3), feat_drop=self.dropout, num_heads = 3)
+            self.graphmodel_2 = pnn.GATConv(self.hidden_size, int(self.hidden_size/3), feat_drop=self.dropout, num_heads = 3)
         elif self.model_name == 'GraphSAGE':
             self.graphmodel = pnn.GraphSageConv(100, self.hidden_size, aggr_func="max")
-            self.graphmodel_h = pnn.GraphSageConv(self.hidden_size, self.hidden_size, aggr_func="max")
-        
+            self.graphmodel_1 = pnn.GraphSageConv(self.hidden_size, self.hidden_size, aggr_func="max")
+            
         self.resfc_1 = nn.Linear(100, 
                         self.hidden_size, 
                         weight_attr = paddle.ParamAttr(name = 'res_w_1'), 
@@ -57,13 +57,13 @@ class Model(paddle.nn.Layer):
                 x = nn.functional.relu(x)
             elif i == 1:
                 x_res = x
-                x = self.graphmodel_h(graph, x)
+                x = self.graphmodel_1(graph, x)
                 x_res = self.resfc_2(x_res)
                 x = x + x_res
                 x = nn.functional.relu(x)
             else:
                 x_res = x
-                x = self.graphmodel_3(graph, x)
+                x = self.graphmodel_2(graph, x)
                 x_res = self.resfc_3(x_res)
                 x = x + x_res
                 x = nn.functional.relu(x)

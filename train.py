@@ -73,11 +73,12 @@ import pandas as pd
 from easydict import EasyDict as edict
 
 config = {
-    "model_name": "GraphSAGE",
+    "model_name": "GCN",
     "num_class": 35,
-    "num_layers": 2,
+    "num_layers": 3,
     "dropout": 0.5,
-    "learning_rate": 0.01,
+    "hidden_size": 256,
+    "learning_rate": 0.005,
     "weight_decay": 0.0005,
     "edge_dropout": 0.00
 }
@@ -178,8 +179,8 @@ import time
 # 使用GPU
 place = fluid.CUDAPlace(0)
 model = Model(config)
-lr = 0.01
-#lr = paddle.optimizer.lr.ExponentialDecay(learning_rate=config.get("learning_rate", 0.01), gamma=0.9, verbose=True)
+#lr = 0.005
+lr = paddle.optimizer.lr.ExponentialDecay(learning_rate=config.get("learning_rate", 0.005), gamma=0.9, verbose=True)
 optim = paddle.optimizer.Adam(learning_rate = lr, parameters = model.parameters())
 
 
@@ -189,10 +190,10 @@ optim = paddle.optimizer.Adam(learning_rate = lr, parameters = model.parameters(
 # 
 # 
 
-# In[8]:
+# In[ ]:
 
 
-epoch = 200
+epoch = 300
 # 将图数据变成 feed_dict 用于传入Paddle Excecutor
 criterion = paddle.nn.loss.CrossEntropyLoss()
 
@@ -218,9 +219,16 @@ for epoch in range(epoch):
     loss = criterion(pred, train_label)
     loss.backward()
     acc = paddle.metric.accuracy(input=pred, label=train_label, k=1)
+    """
     optim.step()
     optim.clear_grad()
-    
+    """
+
+    optim.minimize(loss)
+    optim.clear_grad()
+    if(epoch % 50 == 0):
+        lr.step()
+
     # Full Batch 验证
     # 设定图上面那些节点要获取
     # node_index: 训练节点的nid    
@@ -242,7 +250,7 @@ for epoch in range(epoch):
 # ## 保存模型参数准备Correct and smooth
 # 这里我们调用paddle提供的接口save来保存模型参数为model_state_dict，然后生成预测label。
 
-# In[9]:
+# In[ ]:
 
 
 test_pred = model(graph, graph.node_feat["feat"])
@@ -265,7 +273,7 @@ paddle.save(model.state_dict(), "model_state_dict")
 # ## Correct and Smooth部分
 # 如果我们使用MLP，就需要调用Correct部分，但我们使用了GAT就需要调用Smooth部分。
 
-# In[10]:
+# In[ ]:
 
 
 from correctandsmooth import LayerPropagation, CorrectAndSmooth
@@ -291,7 +299,7 @@ y_soft = cas.smooth(graph, y_soft, mask_label, mask_idx)
 # 
 # 最后一步，我们可以使用pandas轻松生成提交文件，最后下载 submission.csv 提交就好了。
 
-# In[11]:
+# In[ ]:
 
 
 pred = paddle.argmax(y_soft, axis=-1, keepdim=True)
