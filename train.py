@@ -34,7 +34,7 @@
 # 4. 执行预测并产生结果文件
 # 
 
-# In[1]:
+# In[ ]:
 
 
 # 如果需要进行持久化安装, 需要使用持久化路径, 如下方代码示例:
@@ -44,7 +44,7 @@ get_ipython().system('mkdir /home/aistudio/external-libraries')
 get_ipython().system('pip install pgl easydict -q -t /home/aistudio/external-libraries')
 
 
-# In[2]:
+# In[ ]:
 
 
 # 同时添加如下代码, 这样每次环境(kernel)启动的时候只要运行下方代码即可: 
@@ -55,7 +55,7 @@ import sys
 sys.path.append('/home/aistudio/external-libraries')
 
 
-# In[3]:
+# In[ ]:
 
 
 import pgl
@@ -67,7 +67,7 @@ import time
 import pandas as pd
 
 
-# In[4]:
+# In[ ]:
 
 
 from easydict import EasyDict as edict
@@ -75,10 +75,10 @@ from easydict import EasyDict as edict
 config = {
     "model_name": "GCN",
     "num_class": 35,
-    "num_layers": 3,
-    "dropout": 0.5,
+    "num_layers": 8,
+    "dropout": 0.3,
     "hidden_size": 256,
-    "learning_rate": 0.005,
+    "learning_rate": 0.01,
     "weight_decay": 0.0005,
     "edge_dropout": 0.00
 }
@@ -90,7 +90,7 @@ config = edict(config)
 # 
 # 这里主要是用于读取数据集，包括读取图数据构图，以及训练集的划分。
 
-# In[5]:
+# In[ ]:
 
 
 from collections import namedtuple
@@ -139,7 +139,7 @@ def load():
     return dataset
 
 
-# In[6]:
+# In[ ]:
 
 
 dataset = load()
@@ -162,7 +162,7 @@ num_class = dataset.num_classes
 # 
 # 这里是组网模块，目前已经提供了一些预定义的模型，包括**GCN**, **GAT**, **APPNP**等。可以通过简单的配置，设定模型的层数，hidden_size等。你也可以深入到model.py里面，去奇思妙想，写自己的图神经网络。
 
-# In[7]:
+# In[ ]:
 
 
 import pgl
@@ -170,6 +170,7 @@ from pgl.sampling import subgraph
 from pgl.graph import Graph
 import graphmodel_1
 from graphmodel_1 import Model
+from unimpmodel import UniMP
 import paddle
 import paddle.nn as nn
 import numpy as np
@@ -178,9 +179,13 @@ import time
 #place = fluid.CPUPlace()
 # 使用GPU
 place = fluid.CUDAPlace(0)
-model = Model(config)
-#lr = 0.005
-lr = paddle.optimizer.lr.ExponentialDecay(learning_rate=config.get("learning_rate", 0.005), gamma=0.9, verbose=True)
+model_name = config.get("model_name", "GCN")
+if model_name == "UniMP":
+    model = UniMP(config)
+else:
+    model = Model(config)
+lr = 0.005
+#lr = paddle.optimizer.lr.ExponentialDecay(learning_rate=config.get("learning_rate", 0.005), gamma=0.9, verbose=True)
 optim = paddle.optimizer.Adam(learning_rate = lr, parameters = model.parameters())
 
 
@@ -193,7 +198,7 @@ optim = paddle.optimizer.Adam(learning_rate = lr, parameters = model.parameters(
 # In[ ]:
 
 
-epoch = 300
+epoch = 500
 # 将图数据变成 feed_dict 用于传入Paddle Excecutor
 criterion = paddle.nn.loss.CrossEntropyLoss()
 
@@ -219,7 +224,7 @@ for epoch in range(epoch):
     loss = criterion(pred, train_label)
     loss.backward()
     acc = paddle.metric.accuracy(input=pred, label=train_label, k=1)
-    """
+    
     optim.step()
     optim.clear_grad()
     """
@@ -228,7 +233,7 @@ for epoch in range(epoch):
     optim.clear_grad()
     if(epoch % 50 == 0):
         lr.step()
-
+    """
     # Full Batch 验证
     # 设定图上面那些节点要获取
     # node_index: 训练节点的nid    
@@ -241,11 +246,6 @@ for epoch in range(epoch):
     print("Epoch", epoch, "Train Acc", acc, "Valid Acc", val_acc)
 
 
-
-# ## 对测试集进行预测
-# 
-# 训练完成后，我们对测试集进行预测。预测的时候，由于不知道测试集合的标签，我们随意给一些测试label。最终我们获得测试数据的预测结果。
-# 
 
 # ## 保存模型参数准备Correct and smooth
 # 这里我们调用paddle提供的接口save来保存模型参数为model_state_dict，然后生成预测label。
@@ -284,7 +284,7 @@ y_pred = model(graph, graph.node_feat['feat'])
 
 y_soft = nn.functional.softmax(y_pred)
 
-cas = CorrectAndSmooth(50, 0.979, 'DAD', 50, 0.756, 'DAD', 20.)
+cas = CorrectAndSmooth(50, 0.979, 'DAD', 100, 0.5, 'DAD', 20.)
 
 mask_idx = paddle.concat([train_index, val_index])
 node_label = paddle.to_tensor(np.reshape(dataset.node_label, [-1 , 1]))
@@ -316,18 +316,3 @@ submission = pd.DataFrame(data={
                         })
 submission.to_csv("submission_cs.csv", index=False)
 
-
-# ### 2. One More Thing
-# 
-# 如果大家还想要别的奇思妙想，可以参考以下论文，他们都在节点分类上有很大提升。
-# 
-# * Predict then Propagate: Graph Neural Networks meet Personalized PageRank (https://arxiv.org/abs/1810.05997)
-# 
-# * Simple and Deep Graph Convolutional Networks (https://arxiv.org/abs/2007.02133)
-# 
-# * Masked Label Prediction: Unified Message Passing Model for Semi-Supervised Classification (https://arxiv.org/abs/2009.03509)
-# 
-# * Combining Label Propagation and Simple Models Out-performs Graph Neural Networks (https://arxiv.org/abs/2010.13993)
-# 
-# 
-# 大家也可以看看github的 [UniMP算法](https://github.com/PaddlePaddle/PGL/tree/main/ogb_examples/nodeproppred/unimp) 这个例子，里面有相似的数据集，并且最近也是SOTA效果，有帮助👏欢迎点Star
