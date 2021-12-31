@@ -13,8 +13,8 @@ then two .csv files will be generated. The two files
 `submission.csv` is the unsmoothed output and `submission_cs.csv` is the smoothed output of the model.
 
 - `graphmodel_1.py`contains the code for our graph neural network with residual connections.  
-- `correctandsmooth.py`contains the code for the Compare & Smooth trick described in https://arxiv.org/abs/2010.13993.
-
+- `correctandsmooth.py`contains the code for the Compare & Smooth trick described in [this paper](https://arxiv.org/abs/2010.13993)
+- `unimpmodel.py` contains the code for the Baidu UniMP model described in [this paper](https://arxiv.org/pdf/2009.03509)
 
 ## Papers Related
 Combining Label Propagation and Simple Models Out-performs Graph Neural Networks
@@ -23,3 +23,5 @@ https://arxiv.org/abs/2010.13993
 Semi-Supervised Classification with Graph Convolutional Networks
 https://arxiv.org/abs/1609.02907
 
+Masked Label Prediction: Unified Message Passing Model for Semi-Supervised Classification
+https://arxiv.org/abs/2009.03509
