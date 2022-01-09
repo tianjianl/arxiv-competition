@@ -2,7 +2,7 @@
 This repository contains a PaddlePaddle implementation of a GNN for classification on a smaller ogbn-arxiv dataset. 
   
   
-If you want to see the results, you can find them in [this notebook in Chinese](resgcn.ipynb). or [this notebook in English](resgcn_eng.ipynb)
+If you want to see the results, you can find them in [this notebook in Chinese](resgcn.ipynb). or [this notebook in English](ResGCN_eng.ipynb)
 
 ## Training
 in order to start training, simply type 
