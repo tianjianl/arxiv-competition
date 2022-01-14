@@ -7,9 +7,10 @@ If you want to see the results, you can find them in [this notebook in Chinese](
 ## Training
 in order to start training, simply type 
 ```
-python train.py
+sh train.sh
 ```
-then two .csv files will be generated. The two files
+then all of the requirements should be installed automatically.  
+after the training loop, two .csv files will be generated. The two files
 `submission.csv` is the unsmoothed output and `submission_cs.csv` is the smoothed output of the model.
 
 - `graphmodel_1.py`contains the code for our graph neural network with residual connections.  
