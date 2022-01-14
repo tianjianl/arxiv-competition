@@ -37,11 +37,6 @@
 # In[ ]:
 
 
-# 如果需要进行持久化安装, 需要使用持久化路径, 如下方代码示例:
-# If a persistence installation is required, 
-# you need to use the persistence path as the following: 
-get_ipython().system('mkdir /home/aistudio/external-libraries')
-get_ipython().system('pip install pgl easydict -q -t /home/aistudio/external-libraries')
 
 
 # In[ ]:
@@ -176,9 +171,9 @@ import paddle.nn as nn
 import numpy as np
 import time
  #使用CPU
-#place = fluid.CPUPlace()
+place = fluid.CPUPlace()
 # 使用GPU
-place = fluid.CUDAPlace(0)
+#place = fluid.CUDAPlace(0)
 model_name = config.get("model_name", "GCN")
 if model_name == "UniMP":
     model = UniMP(config)
