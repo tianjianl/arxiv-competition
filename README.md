@@ -1,5 +1,4 @@
 ## About  
-飞桨常规赛：图神经网络节点分类 - 12月第8名方案  
 This repository contains a PaddlePaddle implementation of a GNN for classification on a smaller ogbn-arxiv dataset. 
   
 If you want to see the results, you can find them in [this notebook in Chinese](resgcn.ipynb), or [this notebook in English](ResGCN_eng.ipynb).
